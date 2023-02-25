@@ -1,0 +1,23 @@
+{
+  "name": "soltanov-telegram-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Aleksandr Soltanov",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "dependencies": {
+    "mariadb": "^3.0.2",
+    "mysql2": "^2.3.3",
+    "node-telegram-bot-api": "^0.60.0",
+    "sequelize": "^6.28.0",
+    "uuid": "^9.0.0"
+  }
+}
