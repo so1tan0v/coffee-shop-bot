@@ -12,7 +12,7 @@ class RbProducts {
         return await rbProducts.findAll();
     }
 
-    static async getAllProductInTime(typeName) {
+    static async getAllProduct(typeName) {
         return await rbProducts_rbProductsType.findAll({
             include: [
                 {

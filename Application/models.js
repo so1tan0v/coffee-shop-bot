@@ -33,9 +33,10 @@ rbProducts_rbProductsType.belongsTo(rbProductsType, {
 
 const Client = sequelize.define('Client', {
     id        : {type: DataTypes.INTEGER, primaryKey: true, unique: true, autoIncrement: true, comment: 'Идентификатор записи'},
-    chatId    : {type: DataTypes.STRING,  unique: true, index: 'client_chat_id',               comment: 'Идентификатор записи'},
+    chatId    : {type: DataTypes.STRING,  unique: true, index: 'client_chat_id',               comment: 'Идентификатор чата'},
     lastName  : {type: DataTypes.STRING,                                                       comment: 'Имя пользователя'},
-    firstName : {type: DataTypes.STRING,                                                       comment: 'Имя пользователя'},
+    firstName : {type: DataTypes.STRING,                                                       comment: 'Фамилия пользователя'},
+    username  : {type: DataTypes.STRING,                                                       comment: 'Идентификатор пользователя в Telegram'},
     stage_id  : {type: DataTypes.INTEGER,                                                      comment: 'Текущая стадия заказа'}
 }, { timestamps: false })
 Client.belongsTo(rbStages, {

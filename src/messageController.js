@@ -28,10 +28,11 @@ module.exports = async function(msg) {
                 client = await Client.createClient({
                     lastName  : msg.chat.first_name,
                     firstName : msg.chat.last_name,
+                    username  : msg.chat.username,
                     chatId,
                 })
                 await client.updateStage('readyToOrder');
-                await bot.sendMessage(chatId, `Вы впервые обращаетесь к нам, я могу к вам обращаться ${msg.chat.first_name}?`, options.confirmOptions);
+                await bot.sendMessage(chatId, `Вы впервые обращаетесь к нам, я могу к вам обращаться ${msg.chat.first_name ? msg.chat.first_name : msg.chat.last_name}?`, options.confirmOptions);
             }
             return;
         case '/info':

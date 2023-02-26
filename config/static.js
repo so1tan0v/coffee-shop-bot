@@ -30,8 +30,14 @@ const botCommands = [
     {command: '/orders',   description: 'Мои заказы'},
 ];
 
+/**
+ * Флаг, говорящий о том, что надо удалять сообщения
+ */
+let removeMessageWhenSelectOption = false;
+
 module.exports = {
     token,
     dbConnection,
-    botCommands
+    botCommands,
+    removeMessageWhenSelectOption
 }

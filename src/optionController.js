@@ -7,14 +7,25 @@ const Orders         = require('./../class/Orders');
 const RbStages       = require('./../class/RbStages');
 const RbProducts     = require('./../class/RbProducts');
 
-
+const staticConf = require('./../config/static');
 
 
 module.exports = async function(msg) {
-    const data           = msg.data;
-    const chatId         = msg.from.id;
-    const stages         = await RbStages.getAllData();
-    let client           = await Client.getByChatId(chatId);
+    const data            = msg.data;
+    const chatId          = msg.from.id;
+    const stages          = await RbStages.getAllData();
+    let client            = await Client.getByChatId(chatId);
+
+    const date = new Date(),
+          day = date.getDate(),
+          month = date.getMonth() + 1,
+          year = date.getFullYear(),
+          hour = date.getHours(),
+          min  = date.getMinutes(),
+          sec  = date.getSeconds();
+
+    const currentDate = `${day}.${month}.${year} ${hour}:${min}:${sec}`;
+    const dateTimeMessage = `Дата изменения: ${currentDate}`;
 
     let currentStageCode = '';
 
@@ -29,10 +40,14 @@ module.exports = async function(msg) {
           buttonValue   = type.split('_')[0],
           buttonSubType = type.split('_')[1]
                             ? type.split('_')[1]
+                            : '',
+         buttonSubSubType = type.split('_')[2]
+                            ? type.split('_')[2]
                             : '';
 
     switch (buttonType) {
         case 'neworder':
+            await client.updateStage('readyToOrder');
             const productTypeOption = await options.getProductsTypeOption();
             await bot.editMessageText(`Рады видеть вас снова, ${client?.data?.dataValues?.lastName}, выберите категорию?:`, {
                  chat_id      : chatId,
@@ -69,13 +84,21 @@ module.exports = async function(msg) {
                             await bot.sendMessage(chatId, 'Отлично!, готовы сделать заказ?', options.confirmOptions);
                             await client.updateStage('readyToOrder')
                             return;
+                        case 'chooseProduct':
                         case 'readyToOrder':
+                            await client.updateStage('chooseProduct');
                             const productOption = await options.getProductsTypeOption();
-                            await bot.editMessageText('Выберите категорию?', {
-                                 chat_id      : chatId,
-                                 message_id   : msg.message.message_id,
-                                 reply_markup : productOption.reply_markup
-                            });
+                            const message = 'Выберите категорию?';
+                            if(staticConf.removeMessageWhenSelectOption) {
+                                await bot.deleteMessage(chatId, msg.message.message_id);
+                                await bot.sendMessage(chatId, message, productOption);
+                            } else {
+                                await bot.editMessageText(message, {
+                                     chat_id      : chatId,
+                                     message_id   : msg.message.message_id,
+                                     reply_markup : productOption.reply_markup
+                                });
+                            }
                             return;
                     }
                     return;
@@ -102,21 +125,33 @@ module.exports = async function(msg) {
                     let unpaidOrder = await Orders.getUnpaidByClientId(client.data?.dataValues?.id);
                     let option = await options.getShoppingCartsOption(unpaidOrder?.data?.dataValues?.id);
                     if(option) {
-                        await bot.editMessageText(`Подтвердите заказ: \nБыл удален: ${product?.data?.dataValues?.name}`, {
-                             chat_id      : chatId,
-                             message_id   : msg.message.message_id,
-                             reply_markup : option.reply_markup
-                        });
+                        const message = `Подтвердите заказ: \nБыл удален: ${product?.data?.dataValues?.name}\n${dateTimeMessage}`;
+                        if(staticConf.removeMessageWhenSelectOption) {
+                            await bot.deleteMessage(chatId, msg.message.message_id);
+                            await bot.sendMessage(chatId, message , option);
+                        } else {
+                            await bot.editMessageText(message, {
+                                 chat_id      : chatId,
+                                 message_id   : msg.message.message_id,
+                                 reply_markup : option.reply_markup
+                            });
+                        }
                     } else {
                         await bot.sendMessage(chatId, `У вас нет ничего в корзине!, выберете что-нибудь!`)
                     }
                     return;
                 case 'pay':
-                    await bot.editMessageText(`Сейчас вы будете перенаправлены на страницу оплаты (на данный момент не реализовано ничего, так что будет реализовано не по-настоящему)`, {
-                         chat_id      : chatId,
-                         message_id   : msg.message.message_id,
-                         // reply_markup : option.reply_markup
-                    });
+                    const message = `Сейчас вы будете перенаправлены на страницу оплаты (на данный момент не реализовано ничего, так что будет реализовано не по-настоящему)`;
+                    if(staticConf.removeMessageWhenSelectOption) {
+                        await bot.deleteMessage(chatId, msg.message.message_id);
+                        await bot.sendMessage(chatId, message);
+                    } else {
+                        await bot.editMessageText(message, {
+                             chat_id      : chatId,
+                             message_id   : msg.message.message_id,
+                             // reply_markup : option.reply_markup
+                        });
+                    }
 
                     await bot.sendMessage(chatId, '...1')
                     await bot.sendMessage(chatId, '...2')
@@ -128,16 +163,23 @@ module.exports = async function(msg) {
                         payed  : 1,
                         status : 1
                     })
+                    await client.updateStage('readyNextOrder');
                     return;
             }
             return;
         case 'productsType':
-            const option = await options.getProductOptionsByProductType(buttonValue);
-            await bot.editMessageText('Выберите товар', {
-                 chat_id      : chatId,
-                 message_id   : msg.message.message_id,
-                 reply_markup : option.reply_markup
-             });
+            const option = await options.getProductOptionsByProductType(buttonValue, client?.data?.dataValues?.id);
+            const message = 'Выберите товар';
+            if(staticConf.removeMessageWhenSelectOption) {
+                await bot.deleteMessage(chatId, msg.message.message_id);
+                await bot.sendMessage(chatId, message, option);
+            } else {
+                await bot.editMessageText(message, {
+                     chat_id      : chatId,
+                     message_id   : msg.message.message_id,
+                     reply_markup : option.reply_markup
+                });
+            }
             return;
         case 'products':
             let unpaidOrder = await Orders.getUnpaidByClientId(client.data?.dataValues?.id);
@@ -145,16 +187,40 @@ module.exports = async function(msg) {
                 if(unpaidOrder.data){
                     let option = await options.getShoppingCartsOption(unpaidOrder?.data?.dataValues?.id);
                     if(option) {
-                        await bot.editMessageText('Подтвердите заказ:', {
-                             chat_id      : chatId,
-                             message_id   : msg.message.message_id,
-                             reply_markup : option.reply_markup
-                        });
+                        const message = 'Подтвердите заказ:';
+                        if(staticConf.removeMessageWhenSelectOption) {
+                            await bot.deleteMessage(chatId, msg.message.message_id);
+                            await bot.sendMessage(chatId, message, option);
+                        } else {
+                            await bot.editMessageText(message, {
+                                 chat_id      : chatId,
+                                 message_id   : msg.message.message_id,
+                                 reply_markup : option.reply_markup
+                            });
+                        }
                     } else {
                         await bot.sendMessage(chatId, `У вас нет ничего в корзине!, выберете что-нибудь!`)
                     }
                 } else {
                     await bot.sendMessage(chatId, `У вас нет ничего в корзине!, выберете что-нибудь!`)
+                }
+                return;
+            } else if(buttonValue === 'remove') {
+                await ShoppingCart.removeByProductIdAndClientId(buttonSubSubType, client?.data?.dataValues?.id);
+
+                const selectedProduct = await RbProducts.getById(buttonSubSubType);
+                const option = await options.getProductOptionsByProductType(buttonSubType, client?.data?.dataValues?.id);
+                const message = `Выберите товар\nБыл убран: ${selectedProduct?.data?.dataValues?.name}\n${dateTimeMessage}`;
+
+                if(staticConf.removeMessageWhenSelectOption) {
+                    await bot.deleteMessage(chatId, msg.message.message_id);
+                    await bot.sendMessage(chatId, message, option);
+                } else {
+                    await bot.editMessageText(message, {
+                         chat_id      : chatId,
+                         message_id   : msg.message.message_id,
+                         reply_markup : option.reply_markup
+                    });
                 }
                 return;
             }
@@ -163,13 +229,27 @@ module.exports = async function(msg) {
                     client_id: client?.data?.dataValues?.id
                 })
             }
-            const selectedProduct = await RbProducts.getById(buttonValue);
-            // await bot.sendMessage(chatId, `Вы выбрали ${selectedProduct?.data?.dataValues?.name}`);
             await ShoppingCart.create({
                 order_id   : unpaidOrder?.data?.dataValues.id,
                 client_id  : client?.data?.dataValues?.id,
-                product_id : parseInt(buttonValue),
+                product_id : parseInt(buttonSubSubType),
             });
+
+            const selectedProduct = await RbProducts.getById(buttonSubSubType);
+
+            const opt = await options.getProductOptionsByProductType(buttonSubType, client?.data?.dataValues?.id);
+            const displayMessage = `Выберите товар\nБыл добавлен: ${selectedProduct?.data?.dataValues?.name}\n${dateTimeMessage}`;
+
+            if(staticConf.removeMessageWhenSelectOption) {
+                await bot.deleteMessage(chatId, msg.message.message_id);
+                await bot.sendMessage(chatId, displayMessage, opt);
+            } else {
+                await bot.editMessageText(displayMessage, {
+                     chat_id      : chatId,
+                     message_id   : msg.message.message_id,
+                     reply_markup : opt.reply_markup
+                });
+            }
             return;
         default:
             await bot.sendMessage(chatId, `Прошу прощения, я вас не понял.`);

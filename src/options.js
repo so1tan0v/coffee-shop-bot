@@ -1,6 +1,7 @@
 const RbProductsType = require('./../class/RbProductsType');
-const RbProducts = require('./../class/RbProducts');
-const ShoppingCart = require('./../class/ShoppingCart');
+const RbProducts     = require('./../class/RbProducts');
+const ShoppingCart   = require('./../class/ShoppingCart');
+const Order          = require('./../class/Orders');
 
 async function getProductsTypeOption() {
     let productsOption = {
@@ -29,13 +30,19 @@ async function getProductsTypeOption() {
     return productsOption;
 }
 
-async function getProductOptionsByProductType(name) {
+async function getProductOptionsByProductType(name, clientId) {
     let productsOption = {
         reply_markup: {
             inline_keyboard: []
         }
     }
-    const products = await RbProducts.getAllProductInTime(name);
+    const products = await RbProducts.getAllProduct(name);
+    const currentOrder = await Order.getUnpaidByClientId(clientId);
+    let shoppingCart = null;
+    if(currentOrder?.data?.dataValues) {
+        shoppingCart = await ShoppingCart.getByOrderId(currentOrder?.data?.dataValues?.id);
+    }
+
     productsOption
         .reply_markup
         .inline_keyboard
@@ -44,23 +51,38 @@ async function getProductOptionsByProductType(name) {
             callback_data : `communication_getToProductType`
         }]);
     products.forEach(item => {
+        let value = [{
+            text          : `${item?.rbProduct?.dataValues?.name} - ${item?.rbProduct?.dataValues?.price} ₽`,
+            callback_data : `products_add_${name}_${item?.rbProduct?.dataValues?.id}`
+        }];
+        if(shoppingCart) {
+            shoppingCart.forEach(shopItem => {
+                if(item?.rbProduct?.dataValues?.id === shopItem?.dataValues?.rbProduct?.dataValues?.id) {
+                    value = [{
+                        text          : `${item?.rbProduct?.dataValues?.name} - ${item?.rbProduct?.dataValues?.price} ₽ (${shopItem?.dataValues?.count})`,
+                        callback_data : `products_add_${name}_${item?.rbProduct?.dataValues?.id}`
+                    }];
+                    value.push({
+                        text: '➖',
+                        callback_data : `products_remove_${name}_${item?.rbProduct?.dataValues?.id}`
+                    })
+
+                }
+
+            })
+        }
+
         productsOption
             .reply_markup
             .inline_keyboard
-            .push([{
-                text          : item?.rbProduct?.dataValues?.name,
-                callback_data : `products_${item?.rbProduct?.dataValues?.id}`
-            }, {
-                text          : `${item?.rbProduct?.dataValues?.price} ₽`,
-                callback_data : `products_${item?.rbProduct?.dataValues?.id}`
-            }])
+            .push(value)
     })
     productsOption
         .reply_markup
         .inline_keyboard
         .push([{
             text          : 'Завершить заказ ✅',
-            callback_data : `products_completeOrder`
+            callback_data : `products_completeOrder_${name}`
         }]);
 
     return productsOption;

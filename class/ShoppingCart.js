@@ -39,7 +39,7 @@ class ShoppingCart {
     }
 
     static async getByOrderId (orderId) {
-        let data = await models.ShoppingCart.findAll({
+        return await models.ShoppingCart.findAll({
             include: [
                 {
                     model: models.rbProducts
@@ -54,9 +54,7 @@ class ShoppingCart {
                 'client_id',
                 [sequelize.fn('COUNT', sequelize.col('product_id')), 'count']
             ]
-        })
-
-        return data;
+        });
     }
 
     static async removeByProductIdAndClientId(productId, clientId){
